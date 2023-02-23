@@ -14,6 +14,7 @@ Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 import time         # Para operações com tempo
 
 import gpu          # Simula os recursos de uma GPU
+import numpy as np
 
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
@@ -43,10 +44,16 @@ class GL:
         # você pode assumir o desenho dos pontos com a cor emissiva (emissiveColor).
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("Polypoint2D : pontos = {0}".format(point)) # imprime no terminal pontos
-        print("Polypoint2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        #print("Polypoint2D : pontos = {0}".format(point)) # imprime no terminal pontos
+        #print("Polypoint2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        ncolor = [int(i * 255) for i in colors['emissiveColor']]
+        #print(ncolor)
         # Exemplo:
-        gpu.GPU.set_pixel(3, 1, 255, 0, 0) # altera um pixel da imagem (u, v, r, g, b)
+        for a in range(int(len(point)/2)):
+            print(a)
+            #gpu.GPU.set_pixel(int(point[a*2]),int(point[a*2+1]), ncolor[0], ncolor[1], ncolor[2]) # altera um pixel da imagem (u, v, r, g, b)
+            gpu.GPU.draw_pixels([int(point[a*2]),int(point[a*2+1])], gpu.GPU.RGB8, ncolor)  # altera pixel
+
         # cuidado com as cores, o X3D especifica de (0,1) e o Framebuffer de (0,255)
 
     @staticmethod
@@ -61,6 +68,8 @@ class GL:
         # vira uma quantidade par de valores.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o Polyline2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
+
+        ncolor = [int(i * 255) for i in colors['emissiveColor']]
 
         print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
         print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
@@ -79,10 +88,31 @@ class GL:
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
+        ncolor = [int(i * 255) for i in colors['emissiveColor']]
+
         print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
         print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
-        # Exemplo:
-        gpu.GPU.set_pixel(24, 8, 255, 255, 0) # altera um pixel da imagem (u, v, r, g, b)
+        
+        sample = []
+        # for y in range(20):
+        #     sample.append([])
+        #     for x in range(30):
+        #         sample[x].append(x + 0.5, y + 0.5)
+
+        for x in range(30):
+            for y in range(20):
+                for a in range(3):
+                    start = [vertices[2*a],vertices[2*a+1]]
+                    if a != 2:
+                        end = [vertices[2*a+2],vertices[2*a+1+2]]
+                    else:
+                        end = [vertices[0],vertices[1]]
+                    test = np.dot([x+0.5-start[0],y+0.5-start[1]] , [end[1]-start[1],-(end[0]-start[0])])
+                    if test < 0:
+                        break
+                    if a == 2:
+                        gpu.GPU.draw_pixels([x,y], gpu.GPU.RGB8, ncolor)
+
 
     @staticmethod
     def triangleSet(point, colors):
