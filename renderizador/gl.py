@@ -15,6 +15,7 @@ import time         # Para operações com tempo
 
 import gpu          # Simula os recursos de uma GPU
 import numpy as np
+import math
 
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
@@ -76,7 +77,48 @@ class GL:
         # Exemplo:
         pos_x = GL.width//2
         pos_y = GL.height//2
-        gpu.GPU.set_pixel(pos_x, pos_y, 255, 0, 0) # altera um pixel da imagem (u, v, r, g, b)
+
+        point = [int(lineSegments[0]),int(lineSegments[1])]
+        end = [int(lineSegments[0+2]),int(lineSegments[1+2])]
+
+        dx = abs(end[0]-point[0])
+        if point[0]< end[0]:
+            sx = 1
+        else:
+            sx = -1
+        dy = abs(end[1]-point[1])
+        if point[1]< end[1]:
+            sy = 1
+        else:
+            sy = -1
+        if dx > dy:
+            err = dx / 2
+        else:
+            err = -dy / 2
+        e2 = err
+        while True:
+            print(f"{point}     {end}")
+            if ((sx > 0 and point[0] >= end[0]) or (sx < 0 and point[0] <= end[0])) and ((sy > 0 and point[1] >= end[1]) or (sy < 0 and point[1] <= end[1])):
+                gpu.GPU.draw_pixels([int(end[0]),int(end[1])], gpu.GPU.RGB8, ncolor)  # altera pixel
+                break
+            gpu.GPU.draw_pixels([int(point[0]),int(point[1])], gpu.GPU.RGB8, ncolor)  # altera pixel
+            if int(point[0]) == int(end[0]) and int(point[1]) == int(end[1]):
+                break
+            e2 = err
+            if e2 > -dx:
+                err -= dy
+                point[0] += sx
+            if e2 < dy:
+                err += dx
+                point[1] += sy
+
+
+        #for a in range(int(len(lineSegments)/2)):
+        #    print(a)
+            #gpu.GPU.set_pixel(int(point[a*2]),int(point[a*2+1]), ncolor[0], ncolor[1], ncolor[2]) # altera um pixel da imagem (u, v, r, g, b)
+        #    gpu.GPU.draw_pixels([int(lineSegments[a*2]),int(lineSegments[a*2+1])], gpu.GPU.RGB8, ncolor)  # altera pixel
+
+        #gpu.GPU.set_pixel(pos_x, pos_y, 255, 0, 0) # altera um pixel da imagem (u, v, r, g, b)
 
     @staticmethod
     def triangleSet2D(vertices, colors):
