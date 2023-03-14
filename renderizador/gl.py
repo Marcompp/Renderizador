@@ -182,8 +182,8 @@ class GL:
         # tipos de cores.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
-        print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
+        #print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
+        #print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
 
         tris = [[point[0],point[3],point[6]],
@@ -222,16 +222,14 @@ class GL:
         # perspectiva para poder aplicar nos pontos dos objetos geométricos.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("Viewpoint : ", end='')
-        print("position = {0} ".format(position), end='')
-        print("orientation = {0} ".format(orientation), end='')
-        print("fieldOfView = {0} ".format(fieldOfView))
+        #print("Viewpoint : ", end='')
+        #print("position = {0} ".format(position), end='')
+        #print("orientation = {0} ".format(orientation), end='')
+        #print("fieldOfView = {0} ".format(fieldOfView))
 
         orientation = quattorot(orientation[0],orientation[1],orientation[2],orientation[3])
         transla = [[1,0,0,-position[0]],[0,1,0,-position[1]],[0,0,1,-position[2]],[0,0,0,1]]
-        print("BBBBBBBB")
-        print(np.array(orientation).T)
-        print(np.array(transla))
+
         #invert
         GL.lookat = np.matmul(np.array(orientation).T, np.array(transla))
 
@@ -245,10 +243,10 @@ class GL:
         GL.screen = np.array([[GL.width/2,0,0,GL.width/2],[0,-GL.height/2,0,GL.height/2],[0,0,1,0],[0,0,0,1]])
         viewpoint =[position[0],position[1],position[2],orientation]
 
-        print("Viewpoint : ", end='')
-        print("lookat = {0} ".format(GL.lookat), end='')
-        print("perspectiva = {0} ".format(GL.perspectiva), end='')
-        print("screen = {0} ".format(GL.screen))
+        #print("Viewpoint : ", end='')
+        #print("lookat = {0} ".format(GL.lookat), end='')
+        #print("perspectiva = {0} ".format(GL.perspectiva), end='')
+        #print("screen = {0} ".format(GL.screen))
 
     @staticmethod
     def transform_in(translation, scale, rotation):
