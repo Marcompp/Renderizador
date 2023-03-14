@@ -149,8 +149,8 @@ class GL:
         #     for x in range(30):
         #         sample[x].append(x + 0.5, y + 0.5)
 
-        for x in range(30):
-            for y in range(20):
+        for x in range(GL.width):
+            for y in range(GL.height):
                 for a in range(3):
                     start = [vertices[2*a],vertices[2*a+1]]
                     if a != 2:
@@ -183,6 +183,24 @@ class GL:
         print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
 
+        tris = [[point[0],point[3],point[6]],
+                [point[0+1],point[3+1],point[6+1]],
+                [point[0+2],point[3+2],point[6+2]],
+                 [1,1,1]]
+        tris = np.array(tris)
+
+        
+        
+        ntri = np.matmul(GL.screen,GL.perspectiva)
+        ntri = np.matmul(ntri,GL.lookat)
+        ntri = np.matmul(ntri,GL.translation)
+        ntri = np.matmul(ntri,GL.rotation)
+        ntri = np.matmul(ntri,GL.scale)
+        print(tris)
+        tris = np.matmul(ntri,tris)
+
+        print("AAAAAAAAAAA")
+        print(list(tris))
 
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
         vertices = point
@@ -223,7 +241,7 @@ class GL:
         transla = [[1,0,0,position[0]],[0,1,0,position[1]],[0,0,1,position[2]],[0,0,0,1]]
         #print(orientation)
         #invert
-        GL.lookat = np.array(orientation).T * np.array(transla).T
+        GL.lookat = np.matmul(np.array(orientation).T, np.array(transla).T)
 
         GL.resolu = GL.width/GL.height
         FOVy = 2*math.atan(math.tan(fieldOfView/2)*(GL.height/math.sqrt((GL.height*GL.height)+(GL.width*GL.width))))
@@ -231,9 +249,14 @@ class GL:
         bottom = -top
         right = top *GL.resolu
         left = -right
-        GL.perspectiva = [[GL.near/right,0,0,0],[0,GL.near/top,0,0],[0,0,-((GL.far+GL.near)/(GL.far-GL.near)),((-2)*GL.far*GL.near)/(GL.far-GL.near)],[0,0,-1,0]]
-        GL.screen = [[GL.width/2,0,0,GL.width/2],[0,-GL.height/2,0,GL.height/2],[0,0,1,0],[0,0,0,1]]
+        GL.perspectiva = np.array([[GL.near/right,0,0,0],[0,GL.near/top,0,0],[0,0,-((GL.far+GL.near)/(GL.far-GL.near)),((-2)*GL.far*GL.near)/(GL.far-GL.near)],[0,0,-1,0]])
+        GL.screen = np.array([[GL.width/2,0,0,GL.width/2],[0,-GL.height/2,0,GL.height/2],[0,0,1,0],[0,0,0,1]])
         viewpoint =[position[0],position[1],position[2],orientation]
+
+        print("Viewpoint : ", end='')
+        print("lookat = {0} ".format(GL.lookat), end='')
+        print("perspectiva = {0} ".format(GL.perspectiva), end='')
+        print("screen = {0} ".format(GL.screen))
 
     @staticmethod
     def transform_in(translation, scale, rotation):
@@ -256,9 +279,9 @@ class GL:
             print("rotation = {0} ".format(rotation), end='') # imprime no terminal
         print("")
 
-        GL.translation = [[1,0,0,translation[0]],[0,1,0,translation[1]],[0,0,1,translation[2]],[0,0,0,1]]
-        GL.scale = [[scale[0],0,0,0],[0,scale[0],0,0],[0,0,scale[0],0],[0,0,0,1]]
-        GL.rotation = quattorot(rotation[0],rotation[1],rotation[2],rotation[3])
+        GL.translation = np.array([[1,0,0,translation[0]],[0,1,0,translation[1]],[0,0,1,translation[2]],[0,0,0,1]])
+        GL.scale = np.array([[scale[0],0,0,0],[0,scale[0],0,0],[0,0,scale[0],0],[0,0,0,1]])
+        GL.rotation = np.array(quattorot(rotation[0],rotation[1],rotation[2],rotation[3]))
 
     @staticmethod
     def transform_out():
