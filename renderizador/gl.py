@@ -17,6 +17,20 @@ import gpu          # Simula os recursos de uma GPU
 import numpy as np
 import math
 
+def quattorot(a,b,c,d):
+    qr = math.cos(d/2)
+    qi = math.sin(d/2)*a
+    qj = math.sin(d/2)*b
+    qk = math.sin(d/2)*c
+    print(qr,qi,qj,qk)
+    rot1 = [1-2*((qj*qj)+(qk*qk)),2*(qi*qj-qk*qr),2*(qi*qk-qj*qr),0]
+    rot2 = [2*(qi*qj-qk*qr),1-2*((qi*qi)+(qk*qk)),2*(qj*qk-qi*qr),0]
+    rot3 = [2*(qi*qk-qj*qr),2*(qj*qk-qi*qr),1-2*((qi*qi)+(qj*qj)),0]
+    rot4 = [0,0,0,1]
+    rotta = [rot1,rot2,rot3,rot4]
+    return rotta
+
+
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
 
@@ -99,10 +113,10 @@ class GL:
         while True:
             print(f"{point}     {end}")
             if ((sx > 0 and point[0] >= end[0]) or (sx < 0 and point[0] <= end[0])) and ((sy > 0 and point[1] >= end[1]) or (sy < 0 and point[1] <= end[1])):
-                gpu.GPU.draw_pixels([int(end[0]),int(end[1])], gpu.GPU.RGB8, ncolor)  # altera pixel
+                gpu.GPU.draw_pixels([end[0],end[1]], gpu.GPU.RGB8, ncolor)  # altera pixel
                 break
-            gpu.GPU.draw_pixels([int(point[0]),int(point[1])], gpu.GPU.RGB8, ncolor)  # altera pixel
-            if int(point[0]) == int(end[0]) and int(point[1]) == int(end[1]):
+            gpu.GPU.draw_pixels([point[0],point[1]], gpu.GPU.RGB8, ncolor)  # altera pixel
+            if point[0] == end[0] and point[1] == end[1]:
                 break
             e2 = err
             if e2 > -dx:
@@ -113,12 +127,6 @@ class GL:
                 point[1] += sy
 
 
-        #for a in range(int(len(lineSegments)/2)):
-        #    print(a)
-            #gpu.GPU.set_pixel(int(point[a*2]),int(point[a*2+1]), ncolor[0], ncolor[1], ncolor[2]) # altera um pixel da imagem (u, v, r, g, b)
-        #    gpu.GPU.draw_pixels([int(lineSegments[a*2]),int(lineSegments[a*2+1])], gpu.GPU.RGB8, ncolor)  # altera pixel
-
-        #gpu.GPU.set_pixel(pos_x, pos_y, 255, 0, 0) # altera um pixel da imagem (u, v, r, g, b)
 
     @staticmethod
     def triangleSet2D(vertices, colors):
@@ -174,8 +182,29 @@ class GL:
         print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
         print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
+
+
+        ncolor = [int(i * 255) for i in colors['emissiveColor']]
+        vertices = point
+        for x in range(300):
+            for y in range(200):
+                for a in range(3):
+                    start = [vertices[2*a],vertices[2*a+1]]
+                    if a != 2:
+                        end = [vertices[2*a+2],vertices[2*a+1+2]]
+                    else:
+                        end = [vertices[0],vertices[1]]
+                    test = np.dot([(x-150)+0.5-start[0],(y-100)+0.5-start[1]] , [end[1]-start[1],-(end[0]-start[0])])
+                    if test < 0:
+                        break
+                    if a == 2:
+                        gpu.GPU.draw_pixels([x,y], gpu.GPU.RGB8, ncolor)
+
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         gpu.GPU.draw_pixels([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
+        for a in range(int(len(point)/6)):
+            GL.triangleSet2D([point[a],point[a+1],point[a+2],point[a+3],point[a+4],point[a+5]], colors)
+
 
     @staticmethod
     def viewpoint(position, orientation, fieldOfView):
@@ -189,6 +218,22 @@ class GL:
         print("position = {0} ".format(position), end='')
         print("orientation = {0} ".format(orientation), end='')
         print("fieldOfView = {0} ".format(fieldOfView))
+
+        orientation = quattorot(orientation[0],orientation[1],orientation[2],orientation[3])
+        transla = [[1,0,0,position[0]],[0,1,0,position[1]],[0,0,1,position[2]],[0,0,0,1]]
+        #print(orientation)
+        #invert
+        GL.lookat = np.array(orientation).T * np.array(transla).T
+
+        GL.resolu = GL.width/GL.height
+        FOVy = 2*math.atan(math.tan(fieldOfView/2)*(GL.height/math.sqrt((GL.height*GL.height)+(GL.width*GL.width))))
+        top = GL.near * math.tan(FOVy)
+        bottom = -top
+        right = top *GL.resolu
+        left = -right
+        GL.perspectiva = [[GL.near/right,0,0,0],[0,GL.near/top,0,0],[0,0,-((GL.far+GL.near)/(GL.far-GL.near)),((-2)*GL.far*GL.near)/(GL.far-GL.near)],[0,0,-1,0]]
+        GL.screen = [[GL.width/2,0,0,GL.width/2],[0,-GL.height/2,0,GL.height/2],[0,0,1,0],[0,0,0,1]]
+        viewpoint =[position[0],position[1],position[2],orientation]
 
     @staticmethod
     def transform_in(translation, scale, rotation):
@@ -210,6 +255,10 @@ class GL:
         if rotation:
             print("rotation = {0} ".format(rotation), end='') # imprime no terminal
         print("")
+
+        GL.translation = [[1,0,0,translation[0]],[0,1,0,translation[1]],[0,0,1,translation[2]],[0,0,0,1]]
+        GL.scale = [[scale[0],0,0,0],[0,scale[0],0,0],[0,0,scale[0],0],[0,0,0,1]]
+        GL.rotation = quattorot(rotation[0],rotation[1],rotation[2],rotation[3])
 
     @staticmethod
     def transform_out():
