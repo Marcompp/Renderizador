@@ -201,8 +201,8 @@ class GL:
         ntri = np.matmul(ntri,GL.scale)
         
         tris = np.matmul(ntri,tris)
-        print(tris)
-        print("AAAAAAAAAAA")
+        #print(tris)
+        #print("AAAAAAAAAAA")
         tris = tris.tolist()
 
         npoint = [0,0,0,0,0,0]
@@ -211,7 +211,7 @@ class GL:
             for b in range(2):
                 npoint[b+a*2] = tris[b][a]/tris[3][a]
 
-        print(npoint)
+        #print(npoint)
         GL.triangleSet2D(npoint, colors)
 
     @staticmethod
@@ -228,10 +228,12 @@ class GL:
         print("fieldOfView = {0} ".format(fieldOfView))
 
         orientation = quattorot(orientation[0],orientation[1],orientation[2],orientation[3])
-        transla = [[1,0,0,position[0]],[0,1,0,position[1]],[0,0,1,position[2]],[0,0,0,1]]
-        #print(orientation)
+        transla = [[1,0,0,-position[0]],[0,1,0,-position[1]],[0,0,1,-position[2]],[0,0,0,1]]
+        print("BBBBBBBB")
+        print(np.array(orientation).T)
+        print(np.array(transla))
         #invert
-        GL.lookat = np.matmul(np.array(orientation).T, np.array(transla).T)
+        GL.lookat = np.matmul(np.array(orientation).T, np.array(transla))
 
         GL.resolu = GL.width/GL.height
         FOVy = 2*math.atan(math.tan(fieldOfView/2)*(GL.height/math.sqrt((GL.height*GL.height)+(GL.width*GL.width))))
