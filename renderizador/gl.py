@@ -138,7 +138,7 @@ class GL:
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
-        ncolor = [int(i * 255) for i in colors['emissiveColor']]
+        ncolor = [int(i * 255) for i in colors['diffuseColor']]
 
         print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
         print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
@@ -196,32 +196,22 @@ class GL:
         ntri = np.matmul(ntri,GL.translation)
         ntri = np.matmul(ntri,GL.rotation)
         ntri = np.matmul(ntri,GL.scale)
-        print(tris)
+        
         tris = np.matmul(ntri,tris)
-
+        print(tris)
         print("AAAAAAAAAAA")
-        print(list(tris))
+        tris = tris.tolist()
 
-        ncolor = [int(i * 255) for i in colors['emissiveColor']]
-        vertices = point
-        for x in range(300):
-            for y in range(200):
-                for a in range(3):
-                    start = [vertices[2*a],vertices[2*a+1]]
-                    if a != 2:
-                        end = [vertices[2*a+2],vertices[2*a+1+2]]
-                    else:
-                        end = [vertices[0],vertices[1]]
-                    test = np.dot([(x-150)+0.5-start[0],(y-100)+0.5-start[1]] , [end[1]-start[1],-(end[0]-start[0])])
-                    if test < 0:
-                        break
-                    if a == 2:
-                        gpu.GPU.draw_pixels([x,y], gpu.GPU.RGB8, ncolor)
+        npoint = [0,0,0,0,0,0]
 
-        # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        gpu.GPU.draw_pixels([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
-        for a in range(int(len(point)/6)):
-            GL.triangleSet2D([point[a],point[a+1],point[a+2],point[a+3],point[a+4],point[a+5]], colors)
+        for a in range(3):
+            for b in range(2):
+                npoint[b+a*2] = tris[b][a]/tris[3][a]
+
+        print(npoint)
+        GL.triangleSet2D(npoint, colors)
+
+            
 
 
     @staticmethod
