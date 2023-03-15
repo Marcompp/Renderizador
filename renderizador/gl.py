@@ -28,6 +28,28 @@ def quattorot(a,b,c,d):
     rot4 = [0,0,0,1]
     rotta = [rot1,rot2,rot3,rot4]
     return rotta
+
+# == 0: colineares; > 0: horario; < 0: anti-horario
+def ordem(pontos):
+    bax = pontos[0] - pontos[0+3]
+    bay = pontos[1] - pontos[1+3]
+    bcx = pontos[0+6] - pontos[0+3]
+    bcy = pontos[1+6] - pontos[1+3]
+
+    return (bax * bcy - bay * bcx)
+
+
+def horario(pontos):
+    if ordem(pontos) < 0:
+        return pontos
+    else:
+        npontos = [pontos[6],pontos[7],pontos[8],pontos[3],pontos[4],pontos[5],pontos[0],pontos[1],pontos[2]]
+        if ordem(npontos) < 0:
+            return npontos
+        else:
+            return [pontos[0],pontos[1],pontos[2],pontos[6],pontos[7],pontos[8],pontos[3],pontos[4],pontos[5]]
+
+
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
 
@@ -299,14 +321,21 @@ class GL:
         # todos no sentido horário ou todos no sentido anti-horário, conforme especificado.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("TriangleStripSet : pontos = {0} ".format(point), end='')
+        #print("TriangleStripSet : pontos = {0} ".format(point), end='')
+        #for i, strip in enumerate(stripCount):
+        #    print("strip[{0}] = {1} ".format(i, strip), end='')
+        #print("")
+        #print("TriangleStripSet : colors = {0}".format(colors)) # imprime no terminal as cores
+
         for i, strip in enumerate(stripCount):
-            print("strip[{0}] = {1} ".format(i, strip), end='')
-        print("")
-        print("TriangleStripSet : colors = {0}".format(colors)) # imprime no terminal as cores
+            for a in range(strip-2):
+                #print(point[a*3:a*3+9])
+                npoint = point[a*3:a*3+9]
+                GL.triangleSet(horario(npoint), colors)
+
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
+        #gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
 
     @staticmethod
     def indexedTriangleStripSet(point, index, colors):
@@ -324,11 +353,18 @@ class GL:
         # todos no sentido horário ou todos no sentido anti-horário, conforme especificado.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("IndexedTriangleStripSet : pontos = {0}, index = {1}".format(point, index))
-        print("IndexedTriangleStripSet : colors = {0}".format(colors)) # imprime as cores
+        #print("IndexedTriangleStripSet : pontos = {0}, index = {1}".format(point, index))
+        #print("IndexedTriangleStripSet : colors = {0}".format(colors)) # imprime as cores
+        #print(len(point)/3)
+
+        for a in range(int(len(point)/3)-2):
+            if index[a] != -1:
+                #print(point[a*3:a*3+9])
+                npoint = point[a*3:a*3+9]
+                GL.triangleSet(horario(npoint), colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
+        #gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
 
     @staticmethod
     def box(size, colors):
