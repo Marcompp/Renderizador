@@ -163,8 +163,8 @@ class GL:
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
 
-        print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
-        print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
+        #print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
         
         sample = []
         # for y in range(20):
@@ -172,8 +172,8 @@ class GL:
         #     for x in range(30):
         #         sample[x].append(x + 0.5, y + 0.5)
 
-        for x in range(GL.width):
-            for y in range(GL.height):
+        for x in range(int(min(vertices[0],vertices[2],vertices[4])),int(max(vertices[0],vertices[2],vertices[4]))+1):
+            for y in range(int(min(vertices[1],vertices[3],vertices[5])),int(max(vertices[1],vertices[3],vertices[5]))+1):
                 for a in range(3):
                     start = [vertices[2*a],vertices[2*a+1]]
                     if a != 2:
@@ -282,14 +282,14 @@ class GL:
         # modelos do mundo em alguma estrutura de pilha.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("Transform : ", end='')
-        if translation:
-            print("translation = {0} ".format(translation), end='') # imprime no terminal
-        if scale:
-            print("scale = {0} ".format(scale), end='') # imprime no terminal
-        if rotation:
-            print("rotation = {0} ".format(rotation), end='') # imprime no terminal
-        print("")
+        #print("Transform : ", end='')
+        #if translation:
+        #    print("translation = {0} ".format(translation), end='') # imprime no terminal
+        #if scale:
+        #    print("scale = {0} ".format(scale), end='') # imprime no terminal
+        #if rotation:
+        #    print("rotation = {0} ".format(rotation), end='') # imprime no terminal
+        #print("")
 
         GL.translation = np.array([[1,0,0,translation[0]],[0,1,0,translation[1]],[0,0,1,translation[2]],[0,0,0,1]])
         GL.scale = np.array([[scale[0],0,0,0],[0,scale[0],0,0],[0,0,scale[0],0],[0,0,0,1]])
@@ -357,10 +357,11 @@ class GL:
         #print("IndexedTriangleStripSet : colors = {0}".format(colors)) # imprime as cores
         #print(len(point)/3)
 
-        for a in range(int(len(point)/3)-2):
-            if index[a] != -1:
+        for a in range(int(len(index))-2):
+            if (index[a+2] != -1) and (index[a] != -1) and (index[a+1] != -1):
                 #print(point[a*3:a*3+9])
-                npoint = point[a*3:a*3+9]
+                npoint = point[index[a]*3:index[a]*3+3]+point[index[a+1]*3:index[a+1]*3+3]+point[index[a+2]*3:index[a+2]*3+3]
+                print(npoint)
                 GL.triangleSet(horario(npoint), colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
@@ -379,6 +380,8 @@ class GL:
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         print("Box : size = {0}".format(size)) # imprime no terminal pontos
         print("Box : colors = {0}".format(colors)) # imprime no terminal as cores
+
+        
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
@@ -420,6 +423,13 @@ class GL:
             print("\t Matriz com image = {0}".format(image))
             print("\t Dimensões da image = {0}".format(image.shape))
         print("IndexedFaceSet : colors = {0}".format(colors))  # imprime no terminal as cores
+
+        for a in range(int(len(coordIndex))-2):
+            if (coordIndex[a+2] != -1) and (coordIndex[a] != -1) and (coordIndex[a+1] != -1):
+                #print(point[a*3:a*3+9])
+                npoint = coord[coordIndex[a]*3:coordIndex[a]*3+3]+coord[coordIndex[a+1]*3:coordIndex[a+1]*3+3]+coord[coordIndex[a+2]*3:coordIndex[a+2]*3+3]
+                #print(npoint)
+                GL.triangleSet(horario(npoint), colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
