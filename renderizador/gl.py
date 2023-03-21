@@ -66,6 +66,11 @@ class GL:
         GL.near = near
         GL.far = far
 
+        GL.count = 0
+
+        GL.model = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+        GL.pilha = []
+
     @staticmethod
     def polypoint2D(point, colors):
         """Função usada para renderizar Polypoint2D."""
@@ -162,15 +167,18 @@ class GL:
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
+        #ncolor = [255,255,255]
 
-        #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
+        print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
         #print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        print(ncolor)
         
         sample = []
         # for y in range(20):
         #     sample.append([])
         #     for x in range(30):
         #         sample[x].append(x + 0.5, y + 0.5)
+
 
         for x in range(int(min(vertices[0],vertices[2],vertices[4])),int(max(vertices[0],vertices[2],vertices[4]))+1):
             for y in range(int(min(vertices[1],vertices[3],vertices[5])),int(max(vertices[1],vertices[3],vertices[5]))+1):
@@ -204,7 +212,7 @@ class GL:
         # tipos de cores.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        #print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
+        print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
         #print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
 
@@ -218,9 +226,7 @@ class GL:
         
         ntri = np.matmul(GL.screen,GL.perspectiva)
         ntri = np.matmul(ntri,GL.lookat)
-        ntri = np.matmul(ntri,GL.translation)
-        ntri = np.matmul(ntri,GL.rotation)
-        ntri = np.matmul(ntri,GL.scale)
+        ntri = np.matmul(ntri,GL.model)
         
         tris = np.matmul(ntri,tris)
         #print(tris)
@@ -290,10 +296,20 @@ class GL:
         #if rotation:
         #    print("rotation = {0} ".format(rotation), end='') # imprime no terminal
         #print("")
+        GL.count+=1
+        print(GL.count)
+
+        GL.pilha.append(GL.model)
 
         GL.translation = np.array([[1,0,0,translation[0]],[0,1,0,translation[1]],[0,0,1,translation[2]],[0,0,0,1]])
-        GL.scale = np.array([[scale[0],0,0,0],[0,scale[0],0,0],[0,0,scale[0],0],[0,0,0,1]])
+        GL.scale = np.array([[scale[0],0,0,0],[0,scale[1],0,0],[0,0,scale[2],0],[0,0,0,1]])
         GL.rotation = np.array(quattorot(rotation[0],rotation[1],rotation[2],rotation[3]))
+
+        ntri = np.matmul(GL.translation,GL.rotation)
+        ntri = np.matmul(ntri,GL.scale)
+        GL.model = np.matmul(GL.model, ntri)
+
+        
 
     @staticmethod
     def transform_out():
@@ -304,6 +320,7 @@ class GL:
         # pilha implementada.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
+        GL.model = GL.pilha.pop()
         print("Saindo de Transform")
 
     @staticmethod
