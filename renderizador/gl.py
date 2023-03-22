@@ -30,25 +30,30 @@ def quattorot(a,b,c,d):
     return rotta
 
 # == 0: colineares; > 0: horario; < 0: anti-horario
-def ordem(pontos):
-    bax = pontos[0] - pontos[0+3]
-    bay = pontos[1] - pontos[1+3]
-    bcx = pontos[0+6] - pontos[0+3]
-    bcy = pontos[1+6] - pontos[1+3]
+def ordem(pontos,tri = 3):
+    bax = pontos[0] - pontos[0+tri]
+    bay = pontos[1] - pontos[1+tri]
+    bcx = pontos[0+tri*2] - pontos[0+tri]
+    bcy = pontos[1+tri*2] - pontos[1+tri]
 
     return (bax * bcy - bay * bcx)
 
 
-def horario(pontos):
-    if ordem(pontos) < 0:
+def horario(pontos,tri=3):
+    print(f"TRI={tri}")
+    if ordem(pontos,tri) < 0:
         return pontos
     else:
-        npontos = [pontos[6],pontos[7],pontos[8],pontos[3],pontos[4],pontos[5],pontos[0],pontos[1],pontos[2]]
-        if ordem(npontos) < 0:
+        npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
+        if ordem(npontos,tri) < 0:
             return npontos
         else:
-            return [pontos[0],pontos[1],pontos[2],pontos[6],pontos[7],pontos[8],pontos[3],pontos[4],pontos[5]]
+            return pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2]
 
+def antihorario(pontos,tri=3):
+    pontos = horario(pontos,tri)
+    return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
+    
 
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
@@ -90,7 +95,7 @@ class GL:
         #print(ncolor)
         # Exemplo:
         for a in range(int(len(point)/2)):
-            print(a)
+            #print(a)
             #gpu.GPU.set_pixel(int(point[a*2]),int(point[a*2+1]), ncolor[0], ncolor[1], ncolor[2]) # altera um pixel da imagem (u, v, r, g, b)
             gpu.GPU.draw_pixel([int(point[a*2]),int(point[a*2+1])], gpu.GPU.RGB8, ncolor)  # altera pixel
 
@@ -112,8 +117,8 @@ class GL:
 
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
 
-        print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
-        print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        #print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
+        #print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
         
         # Exemplo:
         pos_x = GL.width//2
@@ -169,15 +174,16 @@ class GL:
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
         #ncolor = [255,255,255]
 
-        print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
+        #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
         #print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
-        print(ncolor)
+        #print(ncolor)
         
         sample = []
         # for y in range(20):
         #     sample.append([])
         #     for x in range(30):
         #         sample[x].append(x + 0.5, y + 0.5)
+
 
 
         for x in range(int(min(vertices[0],vertices[2],vertices[4])),int(max(vertices[0],vertices[2],vertices[4]))+1):
@@ -193,6 +199,7 @@ class GL:
                         break
                     if a == 2:
                         gpu.GPU.draw_pixel([x,y], gpu.GPU.RGB8, ncolor)
+                        
 
 
     @staticmethod
@@ -215,7 +222,6 @@ class GL:
         print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
         #print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
-
         tris = [[point[0],point[3],point[6]],
                 [point[0+1],point[3+1],point[6+1]],
                 [point[0+2],point[3+2],point[6+2]],
@@ -232,6 +238,8 @@ class GL:
         #print(tris)
         #print("AAAAAAAAAAA")
         tris = tris.tolist()
+        print(f"tris = {tris}")
+
 
         npoint = [0,0,0,0,0,0]
 
@@ -239,7 +247,9 @@ class GL:
             for b in range(2):
                 npoint[b+a*2] = tris[b][a]/tris[3][a]
 
-        #print(npoint)
+        #print(f"npoint = {npoint}")
+        npoint = antihorario(npoint,2)
+
         GL.triangleSet2D(npoint, colors)
 
     @staticmethod
@@ -297,7 +307,7 @@ class GL:
         #    print("rotation = {0} ".format(rotation), end='') # imprime no terminal
         #print("")
         GL.count+=1
-        print(GL.count)
+        #print(GL.count)
 
         GL.pilha.append(GL.model)
 
