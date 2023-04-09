@@ -15,6 +15,7 @@ import time         # Para operações com tempo
 import gpu          # Simula os recursos de uma GPU
 import math         # Funções matemáticas
 import numpy as np  # Biblioteca do Numpy
+import matplotlib.pyplot as plt
 
 def quattorot(a,b,c,d):
     qr = math.cos(d/2)
@@ -39,21 +40,147 @@ def ordem(pontos,tri = 3):
     return (bax * bcy - bay * bcx)
 
 
-def horario(pontos,tri=3):
-    print(f"TRI={tri}")
+def horario(pontos,zlist = None,tri=3):
+    #print(f"TRI={tri}")
     if ordem(pontos,tri) < 0:
         return pontos
     else:
         npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
         if ordem(npontos,tri) < 0:
-            return npontos
+            if zlist is not None:
+                return npontos, [zlist[2],zlist[1],zlist[0]]
+            else:
+                return npontos
         else:
-            return pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2]
+            if zlist is not None:
+                return pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2], [zlist[0],zlist[2],zlist[1]]
+            else:
+                return pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2]
+        
+def horario_c(pontos,colors,zlist = None, tri=3):
+    #print(f"TRI={tri}")
+    if len(colors) < 9:
+        ctri = 2
+    else:
+        ctri = 3
+    if ordem(pontos,tri) < 0:
+        return pontos,colors
+    else:
+        npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
+        ncolors = colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri]
+        if ordem(npontos,tri) < 0:
+            if zlist is not None:
+                return npontos,ncolors, [zlist[2],zlist[1],zlist[0]]
+            else:
+                return npontos,ncolors
+        else:
+            npontos = pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2]
+            ncolors = colors[0:ctri]+colors[ctri*2:ctri*3]+colors[ctri:ctri*2]
+            if zlist is not None:
+                return npontos,ncolors, [zlist[0],zlist[2],zlist[1]]
+            else:
+                return npontos, ncolors
+        
+def antihorario_c(pontos,colors,zlist = None,tri=3):
+    if len(colors) < 9:
+        ctri = 2
+    else:
+        ctri = 3
+    pontos,colors = horario_c(pontos,colors,zlist,tri)
+    if zlist is not None:
+        return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri] , colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri], [zlist[2],zlist[1],zlist[0]]
+    else:
+        return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri] , colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri]
 
 def antihorario(pontos,tri=3):
     pontos = horario(pontos,tri)
     return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
+
+def baricenter(pontos):
+    b = []
+    b.append((pontos[0]+pontos[2]+pontos[4])/3)
+    b.append((pontos[1]+pontos[3]+pontos[5])/3)
+    return b
+
+def baricalc(pixel,pontos):
+    print(pontos)
+    alpha = (-(pixel[0]-pontos[2])*(pontos[5]-pontos[3]) + (pixel[1]-pontos[3])*(pontos[4]-pontos[2]) )
+    alpha /= (-(pontos[0]-pontos[2])*(pontos[5]-pontos[3]) + (pontos[1]-pontos[3])*(pontos[4]-pontos[2]) )
+    beta = (-(pixel[0]-pontos[4])*(pontos[1]-pontos[5]) + (pixel[1]-pontos[5])*(pontos[0]-pontos[4]) )
+    beta /=  (-(pontos[2]-pontos[4])*(pontos[1]-pontos[5]) + (pontos[3]-pontos[5])*(pontos[0]-pontos[4]) )
+    gamma = 1-alpha-beta
+    return [alpha,beta,gamma]
+
+def baricolor(pixel,pontos,colors,z = None):
+    barivars = baricalc(pixel,pontos)
     
+    ncolor = [0,0,0]
+    for a in range(3):
+        for b in range(3):
+            ncolor[b]+=colors[a*3+b]*barivars[a]
+
+    if z is not None:
+        curr_z = 1 / (barivars[0] * (1 / z[0]) + barivars[1] * (1 / z[1]) + barivars[2] * (1 / z[2]))
+        if curr_z < GL.zbuffer[pixel[0], pixel[1]]:
+            GL.zbuffer[pixel[0], pixel[1]] = curr_z
+        nncolor = [int(i * 255) for i in ncolor]
+        for i in range(len(nncolor)):
+            nncolor[i] = int(curr_z * nncolor[i] / z[i])
+        return nncolor
+
+    return [int(i * 255) for i in ncolor]
+
+def baritex(pixel,pontos,texture,u_list,v_list):
+    barivars = baricalc(pixel,pontos)
+    x_tex = int( (barivars[0] * u_list[0] + barivars[1] * u_list[1] + barivars[2] * u_list[2]) * texture.shape[1]-2 )
+    print(f"x_tex:{x_tex}")
+    if x_tex >= 256:
+        x_tex = 255
+    y_tex = int( (barivars[0] * v_list[0] + barivars[1] * v_list[1] + barivars[2] * v_list[2]) * (texture.shape[0]-2) )
+    if y_tex >= 256:
+        y_tex = 255
+    print(f"y_tex:{y_tex}")
+    return list(texture[y_tex][x_tex][0:3])
+
+def minimap(image,maxLevel = None):
+        w, h = image.shape[:2]
+        
+        # Calculate amount of necessary levels
+        level = int(np.log2(max(w, h)))
+        if maxLevel is None: 
+            maxLevel = level
+        
+        # Dictionary to store mipmapped texture.
+        _map = {0 : image}
+        
+        # Construct each level
+        for step in range(0, min(level, maxLevel)):
+            _map[step+1] = halve_image(_map[step])
+        return _map, level
+
+def halve_image(image):
+        """
+        Halves image size using bilinear filtering.
+        Found at: https://stackoverflow.com/questions/14549696/mipmap-of-image-in-numpy
+        """
+        rows, cols, planes = image.shape
+        image = image.astype('uint16')
+        image = image.reshape(rows // 2, 2, cols // 2, 2, planes)
+        image = image.sum(axis=3).sum(axis=1)
+        return ((image + 2) >> 2).astype('uint8')
+    
+def plotmap(map,level):
+        fig = plt.figure(figsize=(9,(level//3)*3))
+        axList = []
+        for step in map:
+            axList.append(fig.add_subplot(level//3+1, 3, step+1))
+            axList[step].imshow(map[step], interpolation='nearest')
+            axList[step].get_xaxis().set_visible(False)
+            axList[step].get_yaxis().set_visible(False)
+            axList[step].set_title("Mipmap level: {} ({}x{})".format(step, *map[step].shape[:2]))
+        plt.show()
+        
+
 
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
@@ -75,6 +202,8 @@ class GL:
 
         GL.model = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
         GL.pilha = []
+
+        GL.zbuffer = np.matrix(np.ones((GL.height, GL.width)) * np.inf)
 
     @staticmethod
     def polypoint2D(point, colors):
@@ -115,7 +244,9 @@ class GL:
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o Polyline2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
 
+        color = False
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
+
 
         #print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
         #print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
@@ -162,7 +293,7 @@ class GL:
 
 
     @staticmethod
-    def triangleSet2D(vertices, colors):
+    def triangleSet2D(vertices, colors,zpoint = None,texture = None):
         """Função usada para renderizar TriangleSet2D."""
         # Nessa função você receberá os vertices de um triângulo no parâmetro vertices,
         # esses pontos são uma lista de pontos x, y sempre na ordem. Assim point[0] é o
@@ -171,8 +302,21 @@ class GL:
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
-        ncolor = [int(i * 255) for i in colors['emissiveColor']]
+        color = False
+        if type(colors) is dict:
+            ncolor = [int(i * 255) for i in colors['emissiveColor']]
+        else:
+            color = True
         #ncolor = [255,255,255]
+
+
+        if texture is not None:
+            print(colors)
+            u_list = colors[::2]
+            v_list = colors[1::2]
+            print(f"u_list:{u_list}")
+            print(f"v_list:{v_list}")
+            color = False
 
         #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
         #print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
@@ -198,12 +342,21 @@ class GL:
                     if test < 0:
                         break
                     if a == 2:
+                        if x < 0:
+                            x = 0
+                        if y < 0:
+                            y = 0
+                        if color:
+                            ncolor = baricolor([x,y],vertices,colors,zpoint)
+                        if texture is not None:
+                            ncolor = baritex([x,y],vertices,texture,u_list,v_list,zpoint)
+                            #print(ncolor)
                         gpu.GPU.draw_pixel([x,y], gpu.GPU.RGB8, ncolor)
                         
 
 
     @staticmethod
-    def triangleSet(point, colors):
+    def triangleSet(point, colors,texture = None):
         """Função usada para renderizar TriangleSet."""
         # Nessa função você receberá pontos no parâmetro point, esses pontos são uma lista
         # de pontos x, y, e z sempre na ordem. Assim point[0] é o valor da coordenada x do
@@ -219,7 +372,7 @@ class GL:
         # tipos de cores.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
+        #print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
         #print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
         tris = [[point[0],point[3],point[6]],
@@ -238,19 +391,26 @@ class GL:
         #print(tris)
         #print("AAAAAAAAAAA")
         tris = tris.tolist()
-        print(f"tris = {tris}")
 
 
         npoint = [0,0,0,0,0,0]
+        zpoint = [0,0,0]
 
         for a in range(3):
+            zpoint.append(tris[2][a])
             for b in range(2):
                 npoint[b+a*2] = tris[b][a]/tris[3][a]
+            
 
         #print(f"npoint = {npoint}")
-        npoint = antihorario(npoint,2)
+        print(f"colors_preh:{colors}")
 
-        GL.triangleSet2D(npoint, colors)
+        if type(colors)==dict or texture is None:
+            npoint,zpoint = antihorario(npoint,zpoint,2)
+        else:
+            npoint,colors,zpoint = antihorario_c(npoint,colors,zpoint,2)
+        print(f"colors_posh:{colors}")
+        GL.triangleSet2D(npoint, colors,zpoint,texture)
 
     @staticmethod
     def viewpoint(position, orientation, fieldOfView):
@@ -451,12 +611,37 @@ class GL:
             print("\t Dimensões da image = {0}".format(image.shape))
         print("IndexedFaceSet : colors = {0}".format(colors))  # imprime no terminal as cores
 
+        #if texCoord and texCoordIndex and current_texture:
+        #    mipmap,level = minimap(gpu.GPU.load_texture(current_texture[0]))
+        #    plotmap(mipmap,level)
+        #    return
+        
+        if texCoord is not None:
+            vertex_color = False
+            texture = True
+            image_texture = gpu.GPU.load_texture(current_texture[0])
+
+
         for a in range(int(len(coordIndex))-2):
             if (coordIndex[a+2] != -1) and (coordIndex[a] != -1) and (coordIndex[a+1] != -1):
                 #print(point[a*3:a*3+9])
                 npoint = coord[coordIndex[a]*3:coordIndex[a]*3+3]+coord[coordIndex[a+1]*3:coordIndex[a+1]*3+3]+coord[coordIndex[a+2]*3:coordIndex[a+2]*3+3]
                 #print(npoint)
-                GL.triangleSet(horario(npoint), colors)
+                if colorPerVertex:
+                    #TO DO
+                    ncolor = color[colorIndex[a]*3:colorIndex[a]*3+3]+color[colorIndex[a+1]*3:colorIndex[a+1]*3+3]+color[colorIndex[a+2]*3:colorIndex[a+2]*3+3]
+                    npoint, ncolor = horario_c(npoint, ncolor)
+                    GL.triangleSet(npoint, ncolor)
+                elif texCoord:
+                    #print(f"c:{coord}")
+                    #print(f"tc:{texCoord}")
+                    #print(a)
+                    uv = texCoord[texCoordIndex[a]*2:texCoordIndex[a]*2+2]+texCoord[texCoordIndex[a+1]*2:texCoordIndex[a+1]*2+2]+texCoord[texCoordIndex[a+2]*2:texCoordIndex[a+2]*2+2]
+                    #print(f"uv:{uv}")
+                    #print(f"uv:{uv}")
+                    GL.triangleSet(horario(npoint), uv,gpu.GPU.load_texture(current_texture[0]))
+                else:
+                    GL.triangleSet(horario(npoint), colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
