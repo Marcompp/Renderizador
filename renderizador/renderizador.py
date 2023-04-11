@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+import numpy as np
+
 """
 Renderizador X3D.
 
@@ -40,13 +42,13 @@ class Renderizador:
         # Configurando color buffers para exibição na tela
 
         # Cria uma (1) posição de FrameBuffer na GPU
-        fbo = gpu.GPU.gen_framebuffers(1)
+        fbo = gpu.GPU.gen_framebuffers(2)
 
         # Define o atributo FRONT como o FrameBuffe principal
         self.framebuffers["FRONT"] = fbo[0]
 
         # Define que a posição criada será usada para desenho e leitura
-        gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["FRONT"])
+        #gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
         # Opções:
         # - DRAW_FRAMEBUFFER: Faz o bind só para escrever no framebuffer
         # - READ_FRAMEBUFFER: Faz o bind só para leitura no framebuffer
@@ -59,6 +61,25 @@ class Renderizador:
             gpu.GPU.RGB8,
             self.width,
             self.height
+        )
+
+
+        self.framebuffers["MID"] = fbo[1]
+
+        # Define que a posição criada será usada para desenho e leitura
+        gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["MID"])
+        # Opções:
+        # - DRAW_FRAMEBUFFER: Faz o bind só para escrever no framebuffer
+        # - READ_FRAMEBUFFER: Faz o bind só para leitura no framebuffer
+        # - FRAMEBUFFER: Faz o bind para leitura e escrita no framebuffer
+
+        # Aloca memória no FrameBuffer para um tipo e tamanho especificado de buffer
+        gpu.GPU.framebuffer_storage(
+            self.framebuffers["MID"],
+            gpu.GPU.COLOR_ATTACHMENT,
+            gpu.GPU.RGB8,
+            self.width*2,
+            self.height*2
         )
         # Opções:
         # - COLOR_ATTACHMENT: alocações para as cores da imagem renderizada
@@ -79,12 +100,12 @@ class Renderizador:
         gpu.GPU.clear_depth(1.0)
 
         # Definindo tamanho do Viewport para renderização
-        self.scene.viewport(width=self.width, height=self.height)
+        self.scene.viewport(width=self.width*2, height=self.height*2)
 
     def pre(self):
         """Rotinas pré renderização."""
         # Função invocada antes do processo de renderização iniciar.
-
+        gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["MID"])
         # Limpa o frame buffers atual
         gpu.GPU.clear_buffer()
 
@@ -95,7 +116,21 @@ class Renderizador:
     def pos(self):
         """Rotinas pós renderização."""
         # Função invocada após o processo de renderização terminar.
-
+        gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["MID"])
+        gpu.GPU.bind_framebuffer(gpu.GPU.DRAW_FRAMEBUFFER, self.framebuffers["FRONT"])
+        
+        for x in range((self.width)):
+            for y in range((self.height)):
+                pix = [[],[],[],[]]
+                ncolor = [[],[],[]]
+                for x2 in range(2):
+                    for y2 in range(2):
+                        pix[x2+2*y2] = gpu.GPU.read_pixel([2*x+x2,2*y+y2], gpu.GPU.RGB8)
+                for a in range(3):
+                    ncolor[a] = [pi[a] for pi in pix]
+                    ncolor[a] = int(np.mean(ncolor[a]))
+                gpu.GPU.draw_pixel([x,y], gpu.GPU.RGB8, ncolor)
+        gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["FRONT"])
         # Método para a troca dos buffers (NÃO IMPLEMENTADO)
         gpu.GPU.swap_buffers()
 
