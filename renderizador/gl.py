@@ -152,13 +152,15 @@ def baricolor(barivars,colors,curr_z = 1):
             ncolor[b]+=colors[a*3+b]*barivars[a]/curr_z
     return [int(i * 255) for i in ncolor]
 
-def baritex(barivars,texture,u_list,v_list,z=[0,0,0]):
+def baritex(barivars,texture,u_list,v_list,z=[1,1,1],curr_z=1):
     #barivars = baricalc(pixel,pontos)
-    x_tex = int( (barivars[0] * u_list[0] + barivars[1] * u_list[1] + barivars[2] * u_list[2]) * texture.shape[1]-2 )
+    for a in range(3):
+        barivars[a] = barivars[a]/z[a]
+    x_tex = int( curr_z*( (barivars[0] * u_list[0] + barivars[1] * u_list[1] + barivars[2] * u_list[2]) * texture.shape[1]-2 ) )
     #print(f"x_tex:{x_tex}")
     if x_tex >= 256:
         x_tex = 255
-    y_tex = int( (barivars[0] * v_list[0] + barivars[1] * v_list[1] + barivars[2] * v_list[2]) * (texture.shape[0]-2) )
+    y_tex = int( curr_z*( (barivars[0] * v_list[0] + barivars[1] * v_list[1] + barivars[2] * v_list[2]) * (texture.shape[0]-2) ) )
     if y_tex >= 256:
         y_tex = 255
     #print(f"y_tex:{y_tex}")
@@ -333,11 +335,13 @@ class GL:
 
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
         color = False
-        if type(colors) is dict:
-            ncolor = [int(i * 255) for i in colors['emissiveColor']]
-        else:
+        if type(colors) is not dict:
+            
+
             color = True
-        #ncolor = [255,255,255]
+        ncolor = [0,0,0]
+
+
 
 
         if texture is not None:
@@ -379,19 +383,22 @@ class GL:
                             y = 0
                         barivars = baricalc([x,y],vertices)
                         curr_z = 1 / (barivars[0] * (1 / z[0]) + barivars[1] * (1 / z[1]) + barivars[2] * (1 / z[2]))
-                        if GL.zbuffer[x, y] != np.inf:
-                            #print("OVERLAP")
-                            #print(GL.zbuffer[x, y])
-                            #print(curr_z)
-                            pass
-                            #if colors 
                         if curr_z < GL.zbuffer[x, y]:
-                            
                             if color:
                                 ncolor = baricolor(barivars,colors,curr_z)
                             elif texture is not None:
-                                ncolor = baritex(barivars,texture,u_list,v_list,curr_z)
+                                ncolor = baritex(barivars,texture,u_list,v_list,z,curr_z)
                                 #print(ncolor)
+                            else:
+                                ncolor = [int(i * 255) for i in colors['emissiveColor']]
+                                if (type(colors) is dict) and colors["transparency"] > 0:
+                                    #print(f"ncolor:{ncolor}  ",end='')
+                                    
+                                    ocolor = gpu.GPU.read_pixel([x,y], gpu.GPU.RGB8)
+                                    #print(f"ocolor:{ocolor}  ",end='')
+                                    for b in range(3):
+                                        ncolor[b] = int((ncolor[b] * colors["transparency"]) + (ocolor[b] * (1 - colors["transparency"])))
+                                    #print(f"result:{ncolor}")
                             GL.zbuffer[x, y] = curr_z
                             gpu.GPU.draw_pixel([x,y], gpu.GPU.RGB8, ncolor)
                         
@@ -449,12 +456,8 @@ class GL:
 
         if type(colors)==dict or texture is None:
             npoint,zpoint = antihorario_z(npoint,zpoint,2)
-            print("A")
         else:
             npoint,colors,zpoint = antihorario_cz(npoint,colors,zpoint,2)
-            print("B")
-        print(f"NPOINT:{npoint}")
-        print(f"ZPOINT:{zpoint}")
         #print(f"colors_posh:{colors}")
         GL.triangleSet2D(npoint, colors,zpoint,texture)
 
