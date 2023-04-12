@@ -243,7 +243,7 @@ class GL:
         # coordenada x do segundo ponto e assim por diante. Assuma a quantidade de pontos
         # pelo tamanho da lista e assuma que sempre vira uma quantidade par de valores.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o Polypoint2D
-        # você pode assumir o desenho dos pontos com a cor emissiva (emissiveColor).
+        # você pode assumir inicialmente o desenho dos pontos com a cor emissiva (emissiveColor).
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
 
@@ -271,7 +271,7 @@ class GL:
         # função pode receber mais pontos para desenhar vários segmentos. Assuma que sempre
         # vira uma quantidade par de valores.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o Polyline2D
-        # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
+        # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
 
         color = False
         ncolor = [int(i * 255) for i in colors['emissiveColor']]
@@ -330,6 +330,7 @@ class GL:
         # Já point[2] é a coordenada x do segundo ponto e assim por diante. Assuma que a
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
+
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
         color = False
         if type(colors) is dict:
@@ -348,6 +349,7 @@ class GL:
             color = False
 
         #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
+
         print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
         #print(ncolor)
         
