@@ -24,7 +24,7 @@ def quattorot(a,b,c,d):
     qk = math.sin(d/2)*c
     print(qr,qi,qj,qk)
     rot1 = [1-2*((qj*qj)+(qk*qk)),2*(qi*qj-qk*qr),2*(qi*qk-qj*qr),0]
-    rot2 = [2*(qi*qj-qk*qr),1-2*((qi*qi)+(qk*qk)),2*(qj*qk-qi*qr),0]
+    rot2 = [2*(qi*qj+qk*qr),1-2*((qi*qi)+(qk*qk)),2*(qj*qk-qi*qr),0]
     rot3 = [2*(qi*qk-qj*qr),2*(qj*qk-qi*qr),1-2*((qi*qi)+(qj*qj)),0]
     rot4 = [0,0,0,1]
     rotta = [rot1,rot2,rot3,rot4]
@@ -62,7 +62,8 @@ def horario_z(pontos,zlist,tri=3):
         if ordem(npontos,tri) < 0:
             return npontos, [zlist[2],zlist[1],zlist[0]]
         else:
-            return pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2], [zlist[0],zlist[2],zlist[1]]
+            npontos = pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2], 
+            return npontos, [zlist[0],zlist[2],zlist[1]]
 
 def horario_cz(pontos,colors,zlist, tri=3):
     #print(f"TRI={tri}")
@@ -106,8 +107,11 @@ def antihorario_cz(pontos,colors,zlist,tri=3):
         ctri = 2
     else:
         ctri = 3
-    pontos,colors = horario_cz(pontos,colors,zlist,tri)
-    return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri] , colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri], [zlist[2],zlist[1],zlist[0]]
+    pontos,colors,zlist = horario_cz(pontos,colors,zlist,tri)
+    npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
+    ncolors = colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri]
+    nzlist = [zlist[2],zlist[1],zlist[0]]
+    return  npontos,ncolors,nzlist 
 
 def antihorario_c(pontos,colors,tri=3):
     if len(colors) < 9:
@@ -118,8 +122,9 @@ def antihorario_c(pontos,colors,tri=3):
     return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri] , colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri]
 
 def antihorario_z(pontos,zlist = None,tri=3):
-    pontos = horario_z(pontos,zlist,tri)
-    return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri] , [zlist[2],zlist[1],zlist[0]]   
+    pontos,zlist = horario_z(pontos,zlist,tri)
+    npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
+    return  npontos, [zlist[2],zlist[1],zlist[0]]   
 
 def antihorario(pontos,tri=3):
     pontos = horario(pontos,tri)
@@ -220,11 +225,11 @@ class GL:
         GL.model = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
         GL.pilha = []
 
-        GL.zbuffer = []
-        for x in range(GL.width*2):
-            GL.zbuffer.append([])
-            for y in range(GL.height*2):
-                GL.zbuffer.append(99999)
+        # GL.zbuffer = []
+        # for x in range(GL.width*2):
+        #     GL.zbuffer.append([])
+        #     for y in range(GL.height*2):
+        #         GL.zbuffer.append(99999)
         
 
         GL.zbuffer = np.matrix(np.ones((GL.width*2,GL.height*2)) * np.inf)
@@ -343,7 +348,7 @@ class GL:
             color = False
 
         #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
-        #print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
         #print(ncolor)
         
         sample = []
@@ -372,13 +377,20 @@ class GL:
                             y = 0
                         barivars = baricalc([x,y],vertices)
                         curr_z = 1 / (barivars[0] * (1 / z[0]) + barivars[1] * (1 / z[1]) + barivars[2] * (1 / z[2]))
+                        if GL.zbuffer[x, y] != np.inf:
+                            #print("OVERLAP")
+                            #print(GL.zbuffer[x, y])
+                            #print(curr_z)
+                            pass
+                            #if colors 
                         if curr_z < GL.zbuffer[x, y]:
-                            GL.zbuffer[x, y] = curr_z
+                            
                             if color:
                                 ncolor = baricolor(barivars,colors,curr_z)
                             elif texture is not None:
                                 ncolor = baritex(barivars,texture,u_list,v_list,curr_z)
                                 #print(ncolor)
+                            GL.zbuffer[x, y] = curr_z
                             gpu.GPU.draw_pixel([x,y], gpu.GPU.RGB8, ncolor)
                         
 
@@ -422,7 +434,7 @@ class GL:
 
 
         npoint = [0,0,0,0,0,0]
-        zpoint = [0,0,0]
+        zpoint = []
 
         for a in range(3):
             zpoint.append(tris[2][a])
@@ -434,11 +446,15 @@ class GL:
         #print(f"colors_preh:{colors}")
 
         if type(colors)==dict or texture is None:
-            npoint = antihorario(npoint,2)
+            npoint,zpoint = antihorario_z(npoint,zpoint,2)
+            print("A")
         else:
-            npoint,colors = antihorario_c(npoint,colors,2)
+            npoint,colors,zpoint = antihorario_cz(npoint,colors,zpoint,2)
+            print("B")
+        print(f"NPOINT:{npoint}")
+        print(f"ZPOINT:{zpoint}")
         #print(f"colors_posh:{colors}")
-        GL.triangleSet2D(npoint, colors,[1,1,1],texture)
+        GL.triangleSet2D(npoint, colors,zpoint,texture)
 
     @staticmethod
     def viewpoint(position, orientation, fieldOfView):
@@ -506,6 +522,7 @@ class GL:
         ntri = np.matmul(GL.translation,GL.rotation)
         ntri = np.matmul(ntri,GL.scale)
         GL.model = np.matmul(GL.model, ntri)
+        #print(f"MODEL:{GL.model}")
 
         
 
@@ -631,6 +648,8 @@ class GL:
         print("colorPerVertex = {0}".format(colorPerVertex))
         if colorPerVertex and color and colorIndex:
             print("\tcores(r, g, b) = {0}, colorIndex = {1}".format(color, colorIndex))
+        else:
+            print(f"colors:{colors}")
         if texCoord and texCoordIndex:
             print("\tpontos(u, v) = {0}, texCoordIndex = {1}".format(texCoord, texCoordIndex))
         if current_texture:
@@ -655,8 +674,9 @@ class GL:
                 #print(point[a*3:a*3+9])
                 npoint = coord[coordIndex[a]*3:coordIndex[a]*3+3]+coord[coordIndex[a+1]*3:coordIndex[a+1]*3+3]+coord[coordIndex[a+2]*3:coordIndex[a+2]*3+3]
                 #print(npoint)
-                if colorPerVertex:
+                if colorPerVertex and len(colorIndex) !=0:
                     #TO DO
+                    print(f"colorIndex:{colorIndex}")
                     ncolor = color[colorIndex[a]*3:colorIndex[a]*3+3]+color[colorIndex[a+1]*3:colorIndex[a+1]*3+3]+color[colorIndex[a+2]*3:colorIndex[a+2]*3+3]
                     npoint, ncolor = horario_c(npoint, ncolor)
                     GL.triangleSet(npoint, ncolor)
