@@ -56,14 +56,16 @@ def horario_z(pontos,zlist,tri=3):
     #print(f"TRI={tri}")
     #print(len(pontos))
     if ordem(pontos,tri) < 0:
-        return pontos
+        return pontos,zlist
     else:
         npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
         if ordem(npontos,tri) < 0:
-            return npontos, [zlist[2],zlist[1],zlist[0]]
+            nzlist = [zlist[2],zlist[1],zlist[0]]
+            return (npontos, nzlist)
         else:
-            npontos = pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2], 
-            return npontos, [zlist[0],zlist[2],zlist[1]]
+            npontos = pontos[0:tri]+pontos[tri*2:tri*3]+pontos[tri:tri*2]
+            nzlist = [zlist[0],zlist[2],zlist[1]]
+            return (npontos, nzlist)
 
 def horario_cz(pontos,colors,zlist, tri=3):
     #print(f"TRI={tri}")
@@ -72,7 +74,7 @@ def horario_cz(pontos,colors,zlist, tri=3):
     else:
         ctri = 3
     if ordem(pontos,tri) < 0:
-        return pontos,colors
+        return pontos,colors,zlist
     else:
         npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
         ncolors = colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri]
@@ -122,6 +124,8 @@ def antihorario_c(pontos,colors,tri=3):
     return pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri] , colors[ctri*2:ctri*3]+colors[ctri:ctri*2]+colors[0:ctri]
 
 def antihorario_z(pontos,zlist = None,tri=3):
+    #print("AAAAAAAAAA")
+    #print(horario_z(pontos,zlist,tri))
     pontos,zlist = horario_z(pontos,zlist,tri)
     npontos = pontos[tri*2:tri*3]+pontos[tri:tri*2]+pontos[0:tri]
     return  npontos, [zlist[2],zlist[1],zlist[0]]   
@@ -354,7 +358,7 @@ class GL:
 
         #print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
 
-        print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        #print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
         #print(ncolor)
         
         sample = []
@@ -598,7 +602,7 @@ class GL:
             if (index[a+2] != -1) and (index[a] != -1) and (index[a+1] != -1):
                 #print(point[a*3:a*3+9])
                 npoint = point[index[a]*3:index[a]*3+3]+point[index[a+1]*3:index[a+1]*3+3]+point[index[a+2]*3:index[a+2]*3+3]
-                print(npoint)
+                #print(npoint)
                 GL.triangleSet(horario(npoint), colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
@@ -618,7 +622,23 @@ class GL:
         print("Box : size = {0}".format(size)) # imprime no terminal pontos
         print("Box : colors = {0}".format(colors)) # imprime no terminal as cores
 
-        
+        box = [[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]]
+
+
+        vertices = []
+        for vert in range(8):
+            for a in range(3):
+                vertices.append((size[a]/2)*box[vert][a])
+        print(f"vert:{vertices}")
+
+        GL.indexedTriangleStripSet(vertices, [0,1,2,3,-1,-1,4,5,6,7,-1,-1,0,1,4,5,-1,-1,2,3,6,7,-1,-1,0,2,4,6,-1,-1,1,3,5,7], colors)
+
+        #GL.indexedTriangleStripSet([vertices[:12]], [1,2,3,4], colors)
+        #GL.indexedTriangleStripSet([vertices[12:]], [1,1,1,1], colors)
+        #GL.indexedTriangleStripSet([vertices[:6]+vertices[12:18]], [1,2,3,4], colors)
+        #GL.indexedTriangleStripSet([vertices[6:12]+vertices[18:]], [1,2,3,4], colors)
+        #GL.indexedTriangleStripSet([vertices[3:6]+vertices[9:12]+vertices[15:18],vertices[21:]], [1,1,1,1], colors)
+        #GL.indexedTriangleStripSet([vertices[:3]+vertices[6:9]+vertices[12:15],vertices[18:21]], [1,1,1,1], colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
@@ -697,6 +717,7 @@ class GL:
                     GL.triangleSet(horario(npoint), colors)
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
+    
         gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
 
     @staticmethod
@@ -711,6 +732,38 @@ class GL:
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         print("Sphere : radius = {0}".format(radius)) # imprime no terminal o raio da esfera
         print("Sphere : colors = {0}".format(colors)) # imprime no terminal as cores
+
+        
+        nsteps = 40
+        nrings = int(nsteps/2)
+        norm = nsteps/2
+
+        points = []
+        for d in range(nrings):
+            ang2 = (d/norm)*math.pi
+            z = math.cos(ang2)*radius
+            for a in range(nsteps):
+                ang = (a/norm)*math.pi
+                points.append(math.cos(ang)*radius*math.sin(ang2))
+                points.append(math.sin(ang)*radius*math.sin(ang2))
+                points.append(z)
+        print(points)
+        index = []
+        for ring in range(nrings-1):
+            for a in range(nsteps):
+                index.append(ring*nsteps+a)
+                index.append(((ring+1)*nsteps)+a)
+                if a != nsteps-1:
+                    index.append(ring*nsteps+a+1)
+                    index.append(((ring+1)*nsteps)+a+1)
+                else:
+                    index.append(ring*nsteps+0)
+                    index.append(((ring+1)*nsteps)+0)
+
+        GL.indexedTriangleStripSet(points, index, colors)
+
+
+
 
     @staticmethod
     def navigationInfo(headlight):
