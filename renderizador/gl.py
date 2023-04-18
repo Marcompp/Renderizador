@@ -170,6 +170,26 @@ def baritex(barivars,texture,u_list,v_list,z=[1,1,1],curr_z=1):
     #print(f"y_tex:{y_tex}")
     return list(texture[y_tex][x_tex][0:3])
 
+def normaltri(pontos,z):
+    v1 = [pontos[0]-pontos[2],pontos[1]-pontos[3],z[0]-z[1]]
+    v2 = [pontos[0]-pontos[4],pontos[1]-pontos[5],z[0]-z[2]]
+    normal = np.cross(v1,v2)
+    return normal
+
+def lightcalc(light,pixel,curr_z,vertices,z,ncolor):
+    normal = (vertices,z)
+    #print("NORMAL")
+    #print(normal)
+    if light['dir']:
+        res = [i * -1 for i in light['direction']]
+        resul = np.dot(res , normal[-1])
+        lightcolor = [light['color'][0]*resul*light['intensity'],light['color'][1]*resul*light['intensity'],light['color'][2]*resul*light['intensity']]
+    for a in range(3):
+        ncolor[a] *= lightcolor[a]
+        if ncolor[a] >= 255:
+            ncolor[a] = 254
+    return ncolor
+
 def minimap(image,maxLevel = None):
         w, h = image.shape[:2]
         
@@ -210,6 +230,7 @@ def plotmap(map,level):
         
 
 
+
 class GL:
     """Classe que representa a biblioteca gráfica (Graphics Library)."""
 
@@ -230,6 +251,8 @@ class GL:
 
         GL.model = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
         GL.pilha = []
+
+        GL.lights = []
 
         # GL.zbuffer = []
         # for x in range(GL.width*2):
@@ -393,6 +416,11 @@ class GL:
                             elif texture is not None:
                                 ncolor = baritex(barivars,texture,u_list,v_list,z,curr_z)
                                 #print(ncolor)
+                            elif len(GL.lights) > 0:
+                                    ncolor = [int(i * 255) for i in colors['diffuseColor']]
+                                    for light in GL.lights:
+                                        ncolor = lightcalc(light,[x,y],curr_z,vertices,z,ncolor)
+                            
                             else:
                                 ncolor = [int(i * 255) for i in colors['emissiveColor']]
                                 if (type(colors) is dict) and colors["transparency"] > 0:
@@ -403,6 +431,8 @@ class GL:
                                     for b in range(3):
                                         ncolor[b] = int((ncolor[b] * colors["transparency"]) + (ocolor[b] * (1 - colors["transparency"])))
                                     #print(f"result:{ncolor}")
+
+
                             GL.zbuffer[x, y] = curr_z
                             gpu.GPU.draw_pixel([x,y], gpu.GPU.RGB8, ncolor)
                         
@@ -775,6 +805,10 @@ class GL:
         # ambientIntensity = 0,0 e direção = (0 0 −1).
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
+        if headlight:
+
+            GL.directionalLight( 0, [1,1,1],1,[0,0,-1] ) 
+
         print("NavigationInfo : headlight = {0}".format(headlight)) # imprime no terminal
 
     @staticmethod
@@ -791,6 +825,9 @@ class GL:
         print("DirectionalLight : color = {0}".format(color)) # imprime no terminal
         print("DirectionalLight : intensity = {0}".format(intensity)) # imprime no terminal
         print("DirectionalLight : direction = {0}".format(direction)) # imprime no terminal
+        GL.lights.append({'intensity':intensity  , 'ambientIntensity':ambientIntensity , 'color' : color ,'dir':True, 'direction':direction})
+
+        #achar normal do triangulo -- achar,  vetor ponto -- iluminação,   multiplicação dot
 
     @staticmethod
     def pointLight(ambientIntensity, color, intensity, location):
@@ -806,6 +843,7 @@ class GL:
         print("PointLight : color = {0}".format(color)) # imprime no terminal
         print("PointLight : intensity = {0}".format(intensity)) # imprime no terminal
         print("PointLight : location = {0}".format(location)) # imprime no terminal
+        GL.lights.append({'intensity':intensity  , 'ambientIntensity':ambientIntensity , 'color' : color ,'dir':False, 'location':location})
 
     @staticmethod
     def fog(visibilityRange, color):
