@@ -108,9 +108,12 @@ class Renderizador:
 
     def pre(self):
         """Rotinas pré renderização."""
+        gpu.GPU.clear_buffer()
         # Função invocada antes do processo de renderização iniciar.
+        gl.GL.zbuffer = np.matrix(np.ones((gl.GL.width*2,gl.GL.height*2)) * np.inf)
         gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["MID"])
         # Limpa o frame buffers atual
+        gl.GL.zbuffer = np.matrix(np.ones((gl.GL.width*2,gl.GL.height*2)) * np.inf)
         gpu.GPU.clear_buffer()
 
         # Recursos que podem ser úteis:

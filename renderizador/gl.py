@@ -22,7 +22,6 @@ def quattorot(a,b,c,d):
     qi = math.sin(d/2)*a
     qj = math.sin(d/2)*b
     qk = math.sin(d/2)*c
-    print(qr,qi,qj,qk)
     rot1 = [1-2*((qj*qj)+(qk*qk)),2*(qi*qj-qk*qr),2*(qi*qk-qj*qr),0]
     rot2 = [2*(qi*qj+qk*qr),1-2*((qi*qi)+(qk*qk)),2*(qj*qk-qi*qr),0]
     rot3 = [2*(qi*qk-qj*qr),2*(qj*qk-qi*qr),1-2*((qi*qi)+(qj*qj)),0]
@@ -170,22 +169,37 @@ def baritex(barivars,texture,u_list,v_list,z=[1,1,1],curr_z=1):
     #print(f"y_tex:{y_tex}")
     return list(texture[y_tex][x_tex][0:3])
 
-def normaltri(pontos,z):
-    v1 = [pontos[0]-pontos[2],pontos[1]-pontos[3],z[0]-z[1]]
-    v2 = [pontos[0]-pontos[4],pontos[1]-pontos[5],z[0]-z[2]]
+def normaltri(pontos,z,curr_z,height,width):
+
+    difx = max( [abs(pontos[0]-pontos[2]),abs(pontos[0]-pontos[4]),abs(pontos[2]-pontos[4])]   )
+    dify = max( [abs(pontos[1]-pontos[3]),abs(pontos[1]-pontos[5]),abs(pontos[3]-pontos[5])]   )
+    difz = max( [abs(z[0]-z[1]),abs(z[0]-z[2]),abs(z[1]-z[2])])
+    x = [pontos[0]/difx,pontos[2]/difx,pontos[4]/width]
+    y = [pontos[1]/dify,pontos[3]/dify,pontos[5]/dify]
+    z = [int(i/difz) for i in z]
+    v1 = [x[0]-x[1],y[0]-y[1],z[0]-z[1]]
+    v2 = [x[0]-x[2],y[0]-y[2],z[0]-z[2]]
+
+    #v1 = [pontos[0]-pontos[2],pontos[1]-pontos[3],z[0]-z[1]]
+    #v2 = [pontos[0]-pontos[4],pontos[1]-pontos[5],z[0]-z[2]]
+
     normal = np.cross(v1,v2)
     return normal
 
-def lightcalc(light,pixel,curr_z,vertices,z,ncolor):
-    normal = (vertices,z)
-    #print("NORMAL")
-    #print(normal)
+def lightcalc(light,pixel,curr_z,vertices,z,ncolor,height,width):
+    normal = normaltri(vertices,z,curr_z,height,width)
+
     if light['dir']:
         res = [i * -1 for i in light['direction']]
-        resul = np.dot(res , normal[-1])
-        lightcolor = [light['color'][0]*resul*light['intensity'],light['color'][1]*resul*light['intensity'],light['color'][2]*resul*light['intensity']]
+
+        resul = np.dot(normal,res)
+        resul *= -1/2
+        lightcolor = [ light['color'][0] * resul * light['intensity'],
+                      light['color'][1] * resul * light['intensity'],
+                      light['color'][2] * resul * light['intensity'] ]
+
     for a in range(3):
-        ncolor[a] *= lightcolor[a]
+        ncolor[a] *= abs(lightcolor[a])
         if ncolor[a] >= 255:
             ncolor[a] = 254
     return ncolor
@@ -362,14 +376,17 @@ class GL:
 
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
         color = False
-        if type(colors) is not dict:
-            
 
-            color = True
         ncolor = [0,0,0]
+        bcolor = [0,0,0]
 
-
-
+        if type(colors) is not dict:
+            color = True
+        # else:
+        #     if len(GL.lights) > 0:
+        #         bcolor =  [int(i * 255) for i in colors['diffuseColor']]
+        #     else:
+        #         bcolor = [int(i * 255) for i in colors['emissiveColor']]
 
         if texture is not None:
             #print(colors)
@@ -389,7 +406,7 @@ class GL:
         #     sample.append([])
         #     for x in range(30):
         #         sample[x].append(x + 0.5, y + 0.5)
-
+        
 
 
         for x in range(int(min(vertices[0],vertices[2],vertices[4])),int(max(vertices[0],vertices[2],vertices[4]))+1):
@@ -410,6 +427,8 @@ class GL:
                             y = 0
                         barivars = baricalc([x,y],vertices)
                         curr_z = 1 / (barivars[0] * (1 / z[0]) + barivars[1] * (1 / z[1]) + barivars[2] * (1 / z[2]))
+
+
                         if curr_z < GL.zbuffer[x, y]:
                             if color:
                                 ncolor = baricolor(barivars,colors,curr_z)
@@ -417,9 +436,10 @@ class GL:
                                 ncolor = baritex(barivars,texture,u_list,v_list,z,curr_z)
                                 #print(ncolor)
                             elif len(GL.lights) > 0:
-                                    ncolor = [int(i * 255) for i in colors['diffuseColor']]
+                                    ncolor =  [int(i * 255) for i in colors['diffuseColor']]
+
                                     for light in GL.lights:
-                                        ncolor = lightcalc(light,[x,y],curr_z,vertices,z,ncolor)
+                                        ncolor = lightcalc(light,[x,y],curr_z,vertices,z,ncolor,GL.height,GL.width)
                             
                             else:
                                 ncolor = [int(i * 255) for i in colors['emissiveColor']]
@@ -458,6 +478,8 @@ class GL:
         #print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
         #print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
+
+
         tris = [[point[0],point[3],point[6]],
                 [point[0+1],point[3+1],point[6+1]],
                 [point[0+2],point[3+2],point[6+2]],
@@ -465,8 +487,9 @@ class GL:
         tris = np.array(tris)
 
         
-        
         ntri = np.matmul(GL.screen,GL.perspectiva)
+        # XYZ
+
         ntri = np.matmul(ntri,GL.lookat)
         ntri = np.matmul(ntri,GL.model)
         
@@ -476,14 +499,15 @@ class GL:
         tris = tris.tolist()
 
 
+
         npoint = [0,0,0,0,0,0]
         zpoint = []
 
         for a in range(3):
             zpoint.append(tris[2][a])
             for b in range(2):
-                npoint[b+a*2] = tris[b][a]/tris[3][a]
-            
+                npoint[b+a*2] = (tris[b][a]/tris[3][a])
+
 
         #print(f"npoint = {npoint}")
         #print(f"colors_preh:{colors}")
@@ -493,6 +517,7 @@ class GL:
         else:
             npoint,colors,zpoint = antihorario_cz(npoint,colors,zpoint,2)
         #print(f"colors_posh:{colors}")
+
         GL.triangleSet2D(npoint, colors,zpoint,texture)
 
     @staticmethod
@@ -728,6 +753,8 @@ class GL:
             if (coordIndex[a+2] != -1) and (coordIndex[a] != -1) and (coordIndex[a+1] != -1):
                 #print(point[a*3:a*3+9])
                 npoint = coord[coordIndex[a]*3:coordIndex[a]*3+3]+coord[coordIndex[a+1]*3:coordIndex[a+1]*3+3]+coord[coordIndex[a+2]*3:coordIndex[a+2]*3+3]
+                print("NPOINT")
+                print(npoint)
                 #print(npoint)
                 if colorPerVertex and len(colorIndex) !=0:
                     #TO DO
@@ -777,7 +804,7 @@ class GL:
                 points.append(math.cos(ang)*radius*math.sin(ang2))
                 points.append(math.sin(ang)*radius*math.sin(ang2))
                 points.append(z)
-        print(points)
+        #print(points)
         index = []
         for ring in range(nrings-1):
             for a in range(nsteps):
@@ -879,12 +906,16 @@ class GL:
 
         # Esse método já está implementado para os alunos como exemplo
         epoch = time.time()  # time in seconds since the epoch as a floating point number.
-        fraction_changed = (epoch % cycleInterval) / cycleInterval
-
+        if loop:
+            fraction_changed = (epoch % cycleInterval) / cycleInterval
+        else:
+            fraction_changed = (epoch) / cycleInterval
+            if fraction_changed > 1:
+                fraction_changed = 1
         return fraction_changed
 
     @staticmethod
-    def splinePositionInterpolator(set_fraction, key, keyValue, closed):
+    def splinePositionInterpolator(set_fraction, key, keyValue, closed, l = 3):
         """Interpola não linearmente entre uma lista de vetores 3D."""
         # Interpola não linearmente entre uma lista de vetores 3D. O campo keyValue possui
         # uma lista com os valores a serem interpolados, key possui uma lista respectiva de chaves
@@ -900,9 +931,37 @@ class GL:
         print("SplinePositionInterpolator : keyValue = {0}".format(keyValue))
         print("SplinePositionInterpolator : closed = {0}".format(closed))
 
+        entrou = False
+        T = []
         # Abaixo está só um exemplo de como os dados podem ser calculados e transferidos
-        value_changed = [0.0, 0.0, 0.0]
-        
+        for a in range(len(key)):
+            if not closed and (a == 0 or a == len(key)-1):
+                T.append([])
+                for n in range(l):
+                    T[-1].append(0)
+            elif closed and a == len(key)-1:
+                T.append([])
+                for n in range(l):
+                    T[-1].append(keyValue[(0)*l+n]-keyValue[(a-1)*l+n])
+            else:
+                T.append([])
+                for n in range(l):
+                    T[-1].append(keyValue[(a+1)*l+n]-keyValue[(a-1)*l+n])
+        for a in range(len(key)):
+            if set_fraction >= key[a] and set_fraction < key[a+1]:
+                #value_changed = [keyValue[a*l], keyValue[a*l+1], keyValue[a*l+2]]
+                s = (set_fraction - key[a])/(key[a+1] - key[a])
+                S = [s**3,s**2,s,1]
+                C = [keyValue[a*l:(a+1)*l],keyValue[(a+1)*l:(a+2)*l],T[a],T[a+1]]
+                entrou = True
+                break
+        if entrou:
+            H = [[2,-2,1,1],[-3,3,-2,-1],[0,0,1,0],[1,0,0,0]]
+
+            val = np.dot(H,C)
+            value_changed = np.matmul(S,val)
+        else:
+            value_changed = [keyValue[(len(key)-1)*3:(len(key))*3]]
         return value_changed
 
     @staticmethod
@@ -924,8 +983,10 @@ class GL:
         print("OrientationInterpolator : key = {0}".format(key)) # imprime no terminal
         print("OrientationInterpolator : keyValue = {0}".format(keyValue))
 
+        value_changed = GL.splinePositionInterpolator(set_fraction, key, keyValue, True, 4)
+
         # Abaixo está só um exemplo de como os dados podem ser calculados e transferidos
-        value_changed = [0, 0, 1, 0]
+        #value_changed = [0, 0, 1, 0]
 
         return value_changed
 
